@@ -1,0 +1,8 @@
+.cmds
+.ignore
+bin/*
+build.bat
+chichi_timer.c
+*.raddbg_project
+*tags
+test.c
