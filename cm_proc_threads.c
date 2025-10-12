@@ -67,6 +67,7 @@ process_create(char* path, char* args, bool wait, u32 *process_code)
   return value;
 }
 
+#ifndef NOT_SHELL_EXECUTE
 bool
 shell_execute(char* path, char* args)
 {
@@ -77,6 +78,7 @@ shell_execute(char* path, char* args)
   }
   return true;
 }
+#endif
 
 bool
 process_list_all(void)
