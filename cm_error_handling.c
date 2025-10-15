@@ -130,12 +130,12 @@ cm_code_get_string(CM_CODE code)
 }
 
 static void
-debug_info_gather(S8 buffer, char* lvl, char* file, int line, char* fn_call, char* fn_ctx)
+debug_info_gather(S8 buffer, char* file, int line, char* fn_call, char* fn_ctx)
 {
   ZeroMemory(buffer.str, buffer.len);
   int   len = (int)buffer.len - 1;
-  char* fmt = "%s: %s:%d: in function `%s` - Thread %d\n\t From `%s`";
-  wnsprintf(buffer.str, len, fmt, lvl, file, line, fn_call, GetCurrentThreadId(), fn_ctx);
+  char* fmt = "%s:%d: in function `%s` - Thread %d\n\t From `%s`";
+  wnsprintf(buffer.str, len, fmt, file, line, fn_call, GetCurrentThreadId(), fn_ctx);
 }
 
 static char*
@@ -208,10 +208,11 @@ show_error_msg_box_v(DWORD err, ...)
     /* FIXME: Alloc */
     u64 err_size  = c_strlen(error_str);
     u64 flm_size  = c_strlen(g_file_line_msg);
-    u64 full_size = err_size + flm_size + args_size + 7 + (str_count * 2) + 1;
+		u64 last_error = 14;
+    u64 full_size = err_size + flm_size + args_size + 7 + last_error + (str_count * 2) + 1;
     final = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(char) * full_size);
 
-    args_size = wsprintf(final, "%s -> %s", g_file_line_msg, error_str);
+    args_size = wsprintf(final, "%s -> (%d) %s", g_file_line_msg, err, error_str);
 
     va_start(args, err);
     while ((str = va_arg(args, char*)))
@@ -292,7 +293,7 @@ show_error_msg_box(char* str, DWORD err)
     i32 error = message_box(final_output);
 		if (!error)
 		{
-			debug_info_gather(g_debug_info, "[ERROR]", __FILE__, __LINE__, "message_box", __FUNCTION__);
+			debug_info_gather(g_debug_info,  __FILE__, __LINE__, "message_box", __FUNCTION__);
 			show_error_msg_console_v(GetLastError(), NULL);
 		}
     /* FIXME: Alloc */
@@ -307,50 +308,50 @@ show_error_msg_box(char* str, DWORD err)
 
 #define box_debug(fn_call, ...)\
   DO\
-  debug_info_gather(g_debug_info, "[ERROR]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+  debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
   log_debug(CM_OUT_CONSOLE, g_file_line_msg __VA_OPT__(,) __VA_ARGS__, NULL);\
   WHILE
 
 #define console_debug_v(fn_call, fmt, ...)\
   DO\
-  debug_info_gather(g_debug_info, "[ERROR]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+  debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
   log_debug_v(CM_OUT_CONSOLE, g_file_line_msg, (fmt) __VA_OPT__(,) __VA_ARGS__, NULL);\
   WHILE
 
 #define console_debug(fn_call, ...)\
   DO\
-  debug_info_gather(g_debug_info, "[ERROR]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+  debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
   log_debug(CM_OUT_CONSOLE, g_file_line_msg __VA_OPT__(,) __VA_ARGS__, NULL);\
   WHILE
 
 #define report_error_box(fn_call, ...) \
   DO\
-    debug_info_gather(g_debug_info, "[WIN32]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+    debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_box_v(GetLastError(), ## __VA_ARGS__, NULL);\
   WHILE
 
 #define report_error_go(fn_call, label, ...) \
   DO\
-    debug_info_gather(g_debug_info, "[WIN32]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+    debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_console_v(GetLastError(), ## __VA_ARGS__, NULL);\
     goto (label);\
   WHILE
 
 #define report_error(fn_call, ...) \
   DO\
-    debug_info_gather(g_debug_info, "[WIN32]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+    debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_console_v(GetLastError(), ## __VA_ARGS__, NULL);\
   WHILE
 
 #define report_console(x, fn_call) \
   DO\
-    debug_info_gather(g_debug_info, "[ERROR]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+    debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_console((x), GetLastError());\
   WHILE
 
 #define report_box(x, fn_call) \
   DO\
-    debug_info_gather(g_debug_info, "[ERROR]", __FILE__, __LINE__, (fn_call), __FUNCTION__);\
+    debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_box((x), GetLastError());\
   WHILE
 
@@ -358,7 +359,7 @@ show_error_msg_box(char* str, DWORD err)
 #define report_all(x, fn)\
   DO\
     DWORD __code = GetLastError();\
-    debug_info_gather(g_debug_info, "[ERROR]",__FILE__, __LINE__, (fn), __FUNCTION__);\
+    debug_info_gather(g_debug_info, __FILE__, __LINE__, (fn), __FUNCTION__);\
     show_error_msg_console((x), __code);\
     show_error_msg_box((x), __code);\
   WHILE

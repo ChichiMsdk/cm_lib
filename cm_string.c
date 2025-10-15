@@ -188,6 +188,7 @@ s32_from_s8(S8 from, u32 *str32)
 static size_t
 wstrlen(wchar_t* wstr)
 {
+	if (!wstr) return 0;
 	size_t i;
 
 	i = 0;

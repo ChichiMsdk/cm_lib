@@ -62,6 +62,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
   if (!file->h_file || file->h_file == INVALID_HANDLE_VALUE)
   {
     error_value = CM_FILE_OPEN_FAIL;
+		report_error_box("CreateFile");
   }
   if (error_value == CM_OK)
   {
@@ -149,11 +150,7 @@ file_exist_open_map_sized(
 
   GetSystemInfo(&sys);
   gran = sys.dwAllocationGranularity;
-  error_value = file_open(
-      path,
-      access,
-      FILE_SHARE_READ,
-      file);
+  error_value = file_open(path, access, FILE_SHARE_READ, file);
 
   if (error_value == CM_OK)
   {
@@ -168,6 +165,19 @@ file_exist_open_map_sized(
     file->buffer.size   = (file->file_size > max_size) ? max_size : file->file_size;
   }
   return error_value;
+}
+
+force_inline CM_CODE
+file_exist_open_map_rw(char* path, cmFile* file)
+{
+  u32 max_size = MB(50);
+  return file_exist_open_map_sized(
+      path,
+      file,
+      max_size,
+      GENERIC_READ | GENERIC_WRITE,
+      PAGE_READWRITE,
+      FILE_MAP_READ | FILE_MAP_WRITE);
 }
 
 force_inline CM_CODE

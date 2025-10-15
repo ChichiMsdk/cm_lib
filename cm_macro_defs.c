@@ -40,6 +40,7 @@
 #define atomic          _Atomic
 #define fail            false
 #define success         true
+#define EXPORT					__declspec(dllexport)
 
 #if COMPILER_MSVC || (COMPILER_CLANG && CM_WINDOWS)
   #pragma section(".rdata$", read)

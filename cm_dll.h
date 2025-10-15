@@ -8,5 +8,10 @@
     #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
     static HINSTANCE g_hInstance = NULL;
     #define ENTRY BOOL _DllMainCRTStartup(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+
+		#if (COMPILER_MSVC)
+			#pragma comment(linker, "/SUBSYSTEM:WINDOWS")
+			// #pragma comment(linker, "/ENTRY:WinMain")
+		#endif // COMPILER_MSVC
 #endif
 #endif // CM_DLL_H
