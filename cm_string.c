@@ -98,9 +98,7 @@ str_ncmp_impl(char* src, ...)
 
 #define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL) 
 
-global u8 utf8_class[32] = {
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,2,2,3,3,4,5,
-};
+global u8 utf8_class[32] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,2,2,3,3,4,5, };
 
 static UnicodeDecode
 utf8_decode(u8 *str, u64 max)
@@ -419,6 +417,12 @@ debug_printf_c(char* fmt, ...)
   OutputDebugString(buffer);
 }
 
+static i64
+print_string(S8 string)
+{
+  return write_file(STDOUT(), string.str, (DWORD)string.len);
+}
+
 #ifdef NO_CRT_LINKED
 /* WARN: No float in the format ! */
 static i64
@@ -447,12 +451,6 @@ printf(char* fmt, ...)
   va_end(args);
   return write_file(STDOUT(), buffer, len);
 }
-
 #endif
 
-static i64
-print_string(S8 string)
-{
-  return write_file(STDOUT(), string.str, (DWORD)string.len);
-}
 #endif // CM_STRING_C

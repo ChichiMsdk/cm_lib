@@ -45,7 +45,7 @@ page_large_reserve(uint64_t size)
   return VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT | MEM_LARGE_PAGES, PAGE_READWRITE);
 }
 
-char*
+static char*
 heap_error_str(i64 code)
 {
   char *msg = "Unknown";

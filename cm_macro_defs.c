@@ -5,7 +5,7 @@
 #include "cm_types.h"
 
 #if !defined(CRT_LINKED) && !defined(NO_CRT_LINKED)
-  #error You must define ONLY ONE of CRT_LINKED or NO_CRT_LINKED macro
+  #error You must define ONE of CRT_LINKED or NO_CRT_LINKED macro
 #elif defined(CRT_LINKED) && defined(NO_CRT_LINKED)
   #error You must define ONLY ONE of CRT_LINKED or NO_CRT_LINKED macro
 #endif
