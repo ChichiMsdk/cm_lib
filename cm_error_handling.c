@@ -29,6 +29,7 @@ typedef enum CM_CODE {
 
   CM_INVALID_DATA       = 10,
 
+  CM_FILE_WRITE_FAIL    = 19,
   CM_FILE_OPEN_FAIL     = 20,
   CM_DIR_OPEN_FAIL      = 21,
   CM_FILE_MAP_FAIL      = 24,
@@ -115,6 +116,7 @@ cm_code_get_string(CM_CODE code)
     case CM_SIZE_TOO_BIG       : str = "CM_SIZE_TOO_BIG"; break;
     case CM_INVALID_SIZE       : str = "CM_INVALID_SIZE"; break;
     case CM_INVALID_DATA       : str = "CM_INVALID_DATA"; break;
+    case CM_FILE_WRITE_FAIL    : str = "CM_FILE_WRITE_FAIL"; break;
     case CM_FILE_OPEN_FAIL     : str = "CM_FILE_OPEN_FAIL"; break;
     case CM_DIR_OPEN_FAIL      : str = "CM_DIR_OPEN_FAIL"; break;
     case CM_FILE_MAP_FAIL      : str = "CM_FILE_MAP_FAIL"; break;
@@ -364,6 +366,17 @@ show_error_msg_box(char* str, DWORD err)
     show_error_msg_box((x), __code);\
   WHILE
 #endif // report_all
+
+#ifndef OR_RETURN
+  #define OR_RETURN(cond, str, exit_nb)\
+    DO\
+      if (!(cond)) {\
+        report_error((str));\
+        report_error_box((str));\
+        return((exit_nb));\
+      }\
+    WHILE
+#endif // CHECK_EXIT
 
 #ifndef CHECK_EXIT
   #define CHECK_EXIT(cond, str, exit_nb)\

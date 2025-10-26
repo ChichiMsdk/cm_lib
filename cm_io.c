@@ -37,6 +37,19 @@ typedef struct cmFile
 #endif
 
 force_inline CM_CODE
+unmap_view_of_file(void *base)
+{
+  BOOL    value       = TRUE;
+  CM_CODE error_value = CM_OK;
+
+  if (!base) return error_value;
+
+  value = UnmapViewOfFile(base);
+  if (!value) error_value = CM_INVALID_DATA;
+  return error_value;
+}
+
+force_inline CM_CODE
 file_mapping_create(cmFile* file, u32 fl_protect, u32 mapping_max_size)
 {
   u32     low         = mapping_max_size;
@@ -74,6 +87,15 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
       error_value = CM_INVALID_SIZE;
     }
   }
+  return error_value;
+}
+
+static inline CM_CODE
+file_write(char* buffer, u32 size, cmFile* f)
+{
+  CM_CODE error_value = CM_OK; 
+  i64 written = write_file(f->h_file, buffer, size);
+  if (written == -1) error_value = CM_FILE_WRITE_FAIL;
   return error_value;
 }
 
@@ -125,13 +147,24 @@ file_close(cmFile* file)
   if (error_value == CM_OK)
   {
     /* NOTE: Might as well check those, maybe log them somewhere ? */
-    error_value       = (UnmapViewOfFile(file->buffer.view)) ? CM_OK : CM_API_FAIL;
+    error_value       = unmap_view_of_file(file->buffer.view);
     error_value       = handle_close(file->h_map);
     error_value       = handle_close(file->h_file);
     file->buffer.view = NULL;
     file->h_map       = NULL;
     file->h_file      = NULL;
   }
+  return error_value;
+}
+
+static CM_CODE
+file_dump(char* path, char* buffer, u32 size, cmFile* f)
+{
+  CM_CODE error_value = CM_OK;
+  error_value = file_create(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, CREATE_ALWAYS, f);
+
+  if (error_value == CM_OK) error_value = file_write(buffer, size, f);
+  if (error_value == CM_OK) error_value = file_close(f);
   return error_value;
 }
 

@@ -28,7 +28,7 @@
   #else
     #include "cm_windows_entry.h"
   #endif // CM_DLL
-         //
+
 #elif defined(CRT_LINKED)
   #include <stdio.h>
   #include <stdlib.h>

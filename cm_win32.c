@@ -39,7 +39,7 @@ environment_get(void)
  *        Calls CommandLineToArgvW and WideCharToMultiByte
  *        If function fails, the return value is a DWORD from GetLastError().
  */
-static void
+[[deprecated]] static void
 cmd_line_get_ansi(int* argc, char*** argv)
 {
   // Get the command line arguments as wchar_t strings
@@ -64,6 +64,39 @@ cmd_line_get_ansi(int* argc, char*** argv)
   CHECK_EXIT((*argv), "WideCharToMultiByte", EXIT_FAILURE);
 }
 
+typedef struct _Command_Line
+{
+  char** argv;
+  i32    argc;
+}_Command_Line;
+
+static bool
+command_line_args_ansi(_Command_Line* command_line)
+{
+  wchar_t** wargv = CommandLineToArgvW(GetCommandLineW(), &command_line->argc);
+  OR_RETURN(wargv, "CommandLineToArgvW", false);
+
+  int wargvi_size = 0;
+  for (int i = 0; i < command_line->argc;  i++)
+  {
+    wargvi_size += WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL, NULL) + 1;
+  }
+
+  heap_alloc_dz((sizeof(char *) * (command_line->argc + 1)) + sizeof(char) * wargvi_size, command_line->argv);
+
+  /* NOTE: Converting wargv -> argv */
+  char* arg = (char *)&(command_line->argv[command_line->argc + 1]);
+
+  for (int i = 0; i < command_line->argc; i++)
+  {
+    command_line->argv[i] = arg;
+    arg += WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, arg, wargvi_size, NULL, NULL) + 1;
+  }
+  command_line->argv[command_line->argc] = NULL;
+  OR_RETURN(command_line->argv, "WideCharToMultiByte", false);
+  return true;
+}
+
 /* NOTE: Returns true if path exists AND is a directory */
 static bool
 directory_exist(char* path)
@@ -79,6 +112,9 @@ directory_exist(char* path)
   return false;
 }
 
+/* WARNING: This function must be called with an ALLOCATED entire_path !
+ *          It will not crash with MSVC but WILL on any other platform !!!
+ */
 static bool
 directory_create_rf(char* entire_path)
 {
@@ -96,7 +132,7 @@ directory_create_rf(char* entire_path)
   if (len >= 3 && entire_path[1] == ':' && entire_path[2] == '\\')
     curr_len = 2;
 
-  // We can't create root so skip past any root specifier
+  /* NOTE: We can't create root so skip past any root specifier */
   while (entire_path[curr_len] == '\\')
     curr_len++;
 

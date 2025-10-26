@@ -33,6 +33,12 @@
 
 #include <stdbool.h>
 
+/*
+ * #define _deprecated     [[deprecated]]
+ * #define _unused         [[maybe_unused]]
+ * #define _nodiscard      [[nodiscard]]
+ * #define _fallthrough    [[fallthrough]]
+ */
 #define MU              [[maybe_unused]]
 #define ND              [[nodiscard]]
 #define FT              [[fallthrough]]

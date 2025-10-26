@@ -59,8 +59,7 @@ process_create(char* path, char* args, bool wait, u32 *process_code)
     dw = WaitForSingleObject(pi.hThread, 10000); // 10 sec
     log_thread(dw);
     value = GetExitCodeProcess(pi.hProcess, (LPDWORD)process_code);
-    if (value == FALSE)
-      report_error("GetExitCodeProcess", path);
+    if (value == FALSE) report_error("GetExitCodeProcess", path);
   }
   CloseHandle(pi.hThread);
   CloseHandle(pi.hProcess);
