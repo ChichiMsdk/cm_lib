@@ -60,7 +60,40 @@ file_mapping_create(cmFile* file, u32 fl_protect, u32 mapping_max_size)
   low         = (file_size > mapping_max_size) ? mapping_max_size : file_size;
   error_value = CM_OK;
   file->h_map = CreateFileMapping(file->h_file, NULL, fl_protect, high, low, NULL);
-  if (!file->h_map) error_value = CM_FILE_MAP_FAIL;
+  if (!file->h_map)
+  {
+		report_error("CreateFileMapping");
+    error_value = CM_FILE_MAP_FAIL;
+  }
+  return error_value;
+}
+
+force_inline CM_CODE
+file_openW(wchar_t* path, u32 access, u32 share, cmFile* file)
+{
+  u32     c           = OPEN_EXISTING;
+  u32     attr        = FILE_ATTRIBUTE_NORMAL;
+  CM_CODE error_value = CM_OK;
+
+  file->h_file = CreateFileW(path, access, share, NULL, c, attr, NULL);
+  if (file->h_file == INVALID_HANDLE_VALUE)
+  {
+    DWORD value = GetLastError();
+    SetLastError(value);
+    error_value = (value == ERROR_SHARING_VIOLATION) ? CM_SHARE_VIOLATION : CM_FILE_OPEN_FAIL;
+		// report_error("CreateFile");
+  }
+  if (error_value == CM_OK)
+  {
+    /* FIXME: Use GetFileSizeEx instead */
+    file->path      = path;
+    file->file_size = GetFileSize(file->h_file, NULL);
+    if (file->file_size == INVALID_FILE_SIZE)
+    {
+			report("GetFileSize");
+      error_value = CM_INVALID_SIZE;
+    }
+  }
   return error_value;
 }
 
@@ -70,15 +103,17 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
   u32     creation, attr;
   CM_CODE error_value;
 
-  creation    = OPEN_EXISTING;
   attr        = FILE_ATTRIBUTE_NORMAL;
+  creation    = OPEN_EXISTING;
   error_value = CM_OK;
   memset(file, 0, sizeof(cmFile));
   file->h_file = CreateFile(path, access, share, NULL, creation, attr, NULL);
   if (file->h_file == INVALID_HANDLE_VALUE)
   {
-    error_value = CM_FILE_OPEN_FAIL;
-		report_error_box("CreateFile");
+    DWORD value = GetLastError();
+    SetLastError(value);
+    error_value = (value == ERROR_SHARING_VIOLATION) ? CM_SHARE_VIOLATION : CM_FILE_OPEN_FAIL;
+		// report_error("CreateFile");
   }
   if (error_value == CM_OK)
   {
@@ -87,6 +122,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
     file->file_size = GetFileSize(file->h_file, NULL);
     if (file->file_size == INVALID_FILE_SIZE)
     {
+			report("GetFileSize");
       error_value = CM_INVALID_SIZE;
     }
   }
@@ -94,7 +130,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
 }
 
 force_inline CM_CODE
-file_create(char* path, u32 access, u32 share, u32 c, cmFile* f)
+file_create(char* path, u32 access, u32 share, u32 c, u32 attr, cmFile* f)
 {
   u32     attr;
   CM_CODE error_value;
@@ -163,13 +199,18 @@ file_close(cmFile* file)
 }
 
 static CM_CODE
-file_dump(char* path, char* buffer, u32 size, cmFile* f)
+file_dump(char* path, char* buffer, u32 size)
 {
+  u32     generic, share, attr;
+	cmFile	file_struct;
   CM_CODE error_value;
 
-  error_value = file_create(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, CREATE_ALWAYS, f);
-  if (error_value == CM_OK) error_value = file_write(buffer, size, f);
-  if (error_value == CM_OK) error_value = file_close(f);
+	attr				= FILE_ATTRIBUTE_NORMAL;
+	share				= FILE_SHARE_READ | FILE_SHARE_WRITE;
+	generic			= GENERIC_READ	  | GENERIC_WRITE;
+  error_value = file_create(path, generic, share, CREATE_ALWAYS, &file_struct);
+  if (error_value == CM_OK) error_value = file_write(buffer, size, &file_struct);
+  if (error_value == CM_OK) error_value = file_close(file_struct);
   return error_value;
 }
 
@@ -185,6 +226,38 @@ file_exist_open_map_sized(char* path, cmFile *file, u32 max_size, u32 access, u3
   error_value = file_open(path, access, FILE_SHARE_READ, file);
   /* NOTE: We probably want to log this */
   if (error_value == CM_OK) error_value = file_mapping_create(file, fl_protec, max_size);
+  if (error_value == CM_OK)
+  {
+    /* NOTE: we map the entire view of the file in memory */
+    file->buffer.view   = MapViewOfFile(file->h_map, desired, 0, 0 * gran, 0);
+    error_value         = (file->buffer.view) ? CM_OK : CM_FILE_MAP_FAIL;
+    file->buffer.size   = (file->file_size > max_size) ? max_size : file->file_size;
+  }
+  return error_value;
+}
+
+force_inline CM_CODE
+file_exist_open_map_sized_rw(
+    char*                 path,
+    cmFile*               file,
+    u32                   max_size,
+    u32                   access,
+    u32                   fl_protec,
+    u32                   desired)
+{
+  CM_CODE     error_value = CM_OK;
+  SYSTEM_INFO sys         = {0};
+  DWORD       gran        = 0;
+
+  GetSystemInfo(&sys);
+  gran = sys.dwAllocationGranularity;
+  error_value = file_open(path, access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, file);
+
+  if (error_value == CM_OK)
+  {
+    /* NOTE: We probably want to log this */
+    error_value = file_mapping_create(file, fl_protec, max_size);
+  }
   if (error_value == CM_OK)
   {
     /* NOTE: we map the entire view of the file in memory */
