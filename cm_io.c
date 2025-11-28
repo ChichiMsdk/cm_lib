@@ -10,29 +10,32 @@ typedef struct Slice
   u64   size;
 }Slice;
 
+#define cmFile File
+
 #if (CM_WINDOWS)
 #include <windows.h>
 
-typedef struct cmFile
+typedef struct File
 {
   char*     path;
+  wchar_t   *wpath;
   HANDLE    h_file;
   HANDLE    h_map;
   Slice     buffer;
   u64       file_size;
-} cmFile;
+} File;
 
 #elif (OS_LINUX) || (OS_MAC)
 #include <unistd.h>
 
-typedef struct cmFile
+typedef struct File
 {
   char  *path;
   FILE  *file;
   void  *map;
   Slice buffer;
   u64   file_size;
-} cmFile;
+} File;
 
 #endif
 
@@ -86,7 +89,7 @@ file_openW(wchar_t* path, u32 access, u32 share, cmFile* file)
   if (error_value == CM_OK)
   {
     /* FIXME: Use GetFileSizeEx instead */
-    file->path      = path;
+    file->wpath     = path;
     file->file_size = GetFileSize(file->h_file, NULL);
     if (file->file_size == INVALID_FILE_SIZE)
     {
@@ -130,7 +133,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
 }
 
 force_inline CM_CODE
-file_create(char* path, u32 access, u32 share, u32 c, u32 attr, cmFile* f)
+file_create(char* path, u32 access, u32 share, u32 c, cmFile* f)
 {
   u32     attr;
   CM_CODE error_value;
@@ -210,7 +213,7 @@ file_dump(char* path, char* buffer, u32 size)
 	generic			= GENERIC_READ	  | GENERIC_WRITE;
   error_value = file_create(path, generic, share, CREATE_ALWAYS, &file_struct);
   if (error_value == CM_OK) error_value = file_write(buffer, size, &file_struct);
-  if (error_value == CM_OK) error_value = file_close(file_struct);
+  if (error_value == CM_OK) error_value = file_close(&file_struct);
   return error_value;
 }
 
@@ -310,7 +313,7 @@ console_write(HANDLE h, void* str, u32 len)
   u32   bytes_written;
   BOOL  value;
 
-  value = WriteConsole(h,str, len, &bytes_written, NULL);
+  value = WriteConsole(h,str, len, (LPDWORD)&bytes_written, NULL);
   if (value == 0) return -1;
   return bytes_written;
 }
@@ -318,7 +321,7 @@ console_write(HANDLE h, void* str, u32 len)
 static inline bool
 console_pause(void)
 {
-  char          *msg
+  char          *msg;
   BOOL          key_down;
   DWORD         eventsRead;
   INPUT_RECORD  inputRecord;
