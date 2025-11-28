@@ -96,7 +96,7 @@ str_ncmp_impl(char* src, ...)
   return false;
 }
 
-#define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL) 
+#define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL)
 
 global u8 utf8_class[32] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,2,2,3,3,4,5, };
 
