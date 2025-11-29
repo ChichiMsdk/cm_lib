@@ -240,45 +240,7 @@ file_exist_open_map_sized(char* path, cmFile *file, u32 max_size, u32 access, u3
 }
 
 force_inline CM_CODE
-file_exist_open_map_sized_rw(
-    char*                 path,
-    cmFile*               file,
-    u32                   max_size,
-    u32                   access,
-    u32                   fl_protec,
-    u32                   desired)
-{
-  CM_CODE     error_value = CM_OK;
-  SYSTEM_INFO sys         = {0};
-  DWORD       gran        = 0;
-
-  GetSystemInfo(&sys);
-  gran = sys.dwAllocationGranularity;
-  error_value = file_open(path, access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, file);
-
-  if (error_value == CM_OK)
-  {
-    /* NOTE: We probably want to log this */
-    error_value = file_mapping_create(file, fl_protec, max_size);
-  }
-  if (error_value == CM_OK)
-  {
-    /* NOTE: we map the entire view of the file in memory */
-    file->buffer.view   = MapViewOfFile(file->h_map, desired, 0, 0 * gran, 0);
-    error_value         = (file->buffer.view) ? CM_OK : CM_FILE_MAP_FAIL;
-    file->buffer.size   = (file->file_size > max_size) ? max_size : file->file_size;
-  }
-  return error_value;
-}
-
-force_inline CM_CODE
-file_exist_open_map_sized_rw(
-    char*                 path,
-    cmFile*               file,
-    u32                   max_size,
-    u32                   access,
-    u32                   fl_protec,
-    u32                   desired)
+file_exist_open_map_sized_rw(char* path, cmFile* file, u32 max_size, u32 access, u32 fl_protec, u32 desired)
 {
   CM_CODE     error_value = CM_OK;
   SYSTEM_INFO sys         = {0};
