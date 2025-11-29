@@ -25,6 +25,9 @@ typedef struct File
   u64       file_size;
 } File;
 
+#define GENERIC_READ_WRITE					 (GENERIC_READ | GENERIC_WRITE)
+#define FILE_SHARE_READ_WRITE_DELETE (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+
 #elif (OS_LINUX) || (OS_MAC)
 #include <unistd.h>
 
