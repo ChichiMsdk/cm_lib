@@ -59,7 +59,37 @@ file_mapping_create(cmFile* file, u32 fl_protect, u32 mapping_max_size)
   file->h_map = CreateFileMapping(file->h_file, NULL, fl_protect, high, low, NULL);
   if (!file->h_map)
   {
+		report("CreateFileMapping");
     error_value = CM_FILE_MAP_FAIL;
+  }
+  return error_value;
+}
+
+force_inline CM_CODE
+file_openW(wchar_t* path, u32 access, u32 share, cmFile* file)
+{
+  u32     c           = OPEN_EXISTING;
+  u32     attr        = FILE_ATTRIBUTE_NORMAL;
+  CM_CODE error_value = CM_OK;
+
+  file->h_file = CreateFileW(path, access, share, NULL, c, attr, NULL);
+  if (file->h_file == INVALID_HANDLE_VALUE)
+  {
+    DWORD value = GetLastError();
+    SetLastError(value);
+    error_value = (value == ERROR_SHARING_VIOLATION) ? CM_SHARE_VIOLATION : CM_FILE_OPEN_FAIL;
+		// report_error("CreateFile");
+  }
+  if (error_value == CM_OK)
+  {
+    /* FIXME: Use GetFileSizeEx instead */
+    file->path      = path;
+    file->file_size = GetFileSize(file->h_file, NULL);
+    if (file->file_size == INVALID_FILE_SIZE)
+    {
+			report("GetFileSize");
+      error_value = CM_INVALID_SIZE;
+    }
   }
   return error_value;
 }
@@ -72,10 +102,12 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
   CM_CODE error_value = CM_OK;
 
   file->h_file = CreateFile(path, access, share, NULL, c, attr, NULL);
-  if (!file->h_file || file->h_file == INVALID_HANDLE_VALUE)
+  if (file->h_file == INVALID_HANDLE_VALUE)
   {
-    error_value = CM_FILE_OPEN_FAIL;
-		report_error_box("CreateFile");
+    DWORD value = GetLastError();
+    SetLastError(value);
+    error_value = (value == ERROR_SHARING_VIOLATION) ? CM_SHARE_VIOLATION : CM_FILE_OPEN_FAIL;
+		// report_error("CreateFile");
   }
   if (error_value == CM_OK)
   {
@@ -84,6 +116,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
     file->file_size = GetFileSize(file->h_file, NULL);
     if (file->file_size == INVALID_FILE_SIZE)
     {
+			report("GetFileSize");
       error_value = CM_INVALID_SIZE;
     }
   }
@@ -201,10 +234,42 @@ file_exist_open_map_sized(
 }
 
 force_inline CM_CODE
+file_exist_open_map_sized_rw(
+    char*                 path,
+    cmFile*               file,
+    u32                   max_size,
+    u32                   access,
+    u32                   fl_protec,
+    u32                   desired)
+{
+  CM_CODE     error_value = CM_OK;
+  SYSTEM_INFO sys         = {0};
+  DWORD       gran        = 0;
+
+  GetSystemInfo(&sys);
+  gran = sys.dwAllocationGranularity;
+  error_value = file_open(path, access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, file);
+
+  if (error_value == CM_OK)
+  {
+    /* NOTE: We probably want to log this */
+    error_value = file_mapping_create(file, fl_protec, max_size);
+  }
+  if (error_value == CM_OK)
+  {
+    /* NOTE: we map the entire view of the file in memory */
+    file->buffer.view   = MapViewOfFile(file->h_map, desired, 0, 0 * gran, 0);
+    error_value         = (file->buffer.view) ? CM_OK : CM_FILE_MAP_FAIL;
+    file->buffer.size   = (file->file_size > max_size) ? max_size : file->file_size;
+  }
+  return error_value;
+}
+
+force_inline CM_CODE
 file_exist_open_map_rw(char* path, cmFile* file)
 {
   u32 max_size = MB(50);
-  return file_exist_open_map_sized(
+  return file_exist_open_map_sized_rw(
       path,
       file,
       max_size,
@@ -240,7 +305,7 @@ console_pause(void)
 {
   DWORD         eventsRead  = 0;
   DWORD         written     = 0;
-  char*         msg         = "Press any key to continue . . .\r\n";
+  char*         msg         = "Press any key to continue ...\r\n";
   INPUT_RECORD  inputRecord = {0};
 
   if (console_write(STDOUT(), msg, (u32) strlen(msg)) == -1)
@@ -256,8 +321,7 @@ console_pause(void)
       return false;
     }
     BOOL key_down = inputRecord.Event.KeyEvent.bKeyDown;
-    if (inputRecord.EventType == KEY_EVENT && key_down)
-      break;
+    if (inputRecord.EventType == KEY_EVENT && key_down) break;
   }
   return true;
 }

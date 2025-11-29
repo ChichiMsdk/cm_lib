@@ -96,7 +96,7 @@ str_ncmp_impl(char* src, ...)
   return false;
 }
 
-#define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL) 
+#define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL)
 
 global u8 utf8_class[32] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,2,2,3,3,4,5, };
 
@@ -159,6 +159,152 @@ utf8_decode(u8 *str, u64 max)
     }
   }
   return(result);
+}
+
+/* NOTE: https://gist.github.com/tommai78101/3631ed1f136b78238e85582f08bdc618 */
+void
+utf8_to_utf16(u8* utf8_str, i32 utf8_size, i16* utf16_str, i32 utf16_size)
+{
+	i32  utf8_cursor     = 0;
+	i32  utf16_cursor    = 0;
+	u8*  utf8_code_unit  = utf8_str;
+	i16* utf16_code_unit = utf16_str;
+
+  /* NOTE: 
+   *       Check if UTF-16 iterator is less than max output size. 
+   *       If true, then check if UTF-8 iterator is less than UTF-8 max string size.
+   *       This conditional checking based on order of precedence is intentionally done so it
+   *       prevents the while loop from continuing onwards if the iterators are outside of the intended sizes.
+   */
+	while (*utf8_code_unit && (utf16_cursor < utf16_size || utf8_cursor < utf8_size)) 
+	{
+		if (*utf8_code_unit < 0x80)
+		{
+			/* NOTE: 0..127 ASCII range. */
+			*utf16_code_unit = (i16) (*utf8_code_unit);
+			utf16_code_unit++;
+			utf16_cursor++;
+
+			utf8_code_unit++;
+			utf8_cursor++;
+		}
+		else if (*utf8_code_unit < 0xC0)
+		{
+			/* NOTE: 0x80..0xBF -> ignore. Reserved for UTF-8 encoding. */
+			utf8_code_unit++;
+			utf8_cursor++;
+		}
+		else if (*utf8_code_unit < 0xE0)
+		{
+			/* NOTE: 128..2047, the extended ASCII range, and into the Basic Multilingual Plane. */
+			i16 high_short = (i16) ((*utf8_code_unit) & 0x1F);
+			utf8_code_unit++;
+
+			i16 low_short = (i16) ((*utf8_code_unit) & 0x3F);
+			utf8_code_unit++;
+
+      /* NOTE:
+       *      Need 6 instead of 8.
+       *      It's because 0x3F is 6 bits of information from the low short. By shifting 8 bits, you are 
+			 *      a2 extra zeroes in between the actual data of both shorts.
+       */
+			i32 unicode = (high_short << 6) | low_short;
+
+			if ((0 <= unicode && unicode <= 0xD7FF) || (0xE000 <= unicode && unicode <= 0xFFFF))
+			{
+				*utf16_code_unit = (i16) unicode;
+				utf16_code_unit++;
+				utf16_cursor++;
+			}
+			utf8_cursor += 2;
+		}
+		else if (*utf8_code_unit < 0xF0)
+		{
+      /* 2048..65535, the remaining Basic Multilingual Plane.
+       * 
+       * NOTE:
+			 *      1110aaaa 10bbbbcc 10ccdddd
+			 *      Where a is 4th byte, b is 3rd byte, c is 2nd byte, and d is 1st byte.
+       */
+			i16 fourth = (i16) ((*utf8_code_unit) & 0xF);
+			utf8_code_unit++;
+
+			i16 third = (i16) ((*utf8_code_unit) & 0x3C) >> 2;
+			i16 second_high = (i16) ((*utf8_code_unit) & 0x3);
+			utf8_code_unit++;
+
+			i16 second_low = (i16) ((*utf8_code_unit) & 0x30) >> 4;
+			i16 first = (i16) ((*utf8_code_unit) & 0xF);
+			utf8_code_unit++;
+
+			/* NOTE: Create resulting UTF-16 code unit, then increment iterator. */
+			i32 unicode = (fourth << 12) | (third << 8) | (second_high << 6) | (second_low << 4) | first;
+
+			/* NOTE: According to math, UTF-8 encoded "unicode" should always fall within these two ranges. */
+			if ((0 <= unicode && unicode <= 0xD7FF) || (0xE000 <= unicode && unicode <= 0xFFFF))
+			{
+				*utf16_code_unit = (i16) unicode;
+				utf16_code_unit++;
+				utf16_cursor++;
+			}
+			utf8_cursor += 3;
+		}
+		else if (*utf8_code_unit < 0xF8)
+		{ 
+      /* 65536..10FFFF, Unicode UTF range
+       *
+			 * NOTE:
+			 *       11110abb 10bbcccc 10ddddee 10eeffff
+			 *       Where a is 6th byte, b is 5th byte, c is 4th byte, and so on.
+       */
+			i16 sixth         = (i16) ((*utf8_code_unit) & 0x4) >> 2;
+			i16 fifth_high    = (i16) ((*utf8_code_unit) & 0x3);
+			utf8_code_unit++;
+
+			i16 fifth_low     = (i16) ((*utf8_code_unit) & 0x30) >> 4;
+			i16 fourth        = (i16) ((*utf8_code_unit) & 0xF);
+			utf8_code_unit++;
+
+			i16 third         = (i16) ((*utf8_code_unit) & 0x3C) >> 2;
+			i16 second_high   = (i16) ((*utf8_code_unit) & 0x3);
+			utf8_code_unit++;
+
+			i16 second_low    = (i16) ((*utf8_code_unit) & 0x30) >> 4;
+			i16 first         = (i16) ((*utf8_code_unit) & 0xF);
+			utf8_code_unit++;
+
+			i32 unicode        = (sixth << 4) | (fifth_high << 2) | fifth_low | (fourth << 12) | (third << 8)
+                           | (second_high << 6) | (second_low << 4) | first;
+			i16 high_surrogate = (unicode - 0x10000) / 0x400 + 0xD800;
+			i16 low_surrogate  = (unicode - 0x10000) % 0x400 + 0xDC00;
+
+			*utf16_code_unit = low_surrogate;
+			utf16_code_unit++;
+			utf16_cursor++;
+
+			if (utf16_cursor < utf16_size)
+			{
+				*utf16_code_unit = high_surrogate;
+				utf16_code_unit++;
+				utf16_cursor++;
+			}
+			utf8_cursor += 4;
+		}
+		else
+		{ 
+      /* NOTE: Invalid UTF-8 code unit */
+			utf8_code_unit++;
+			utf8_cursor++;
+		}
+	}
+
+	/* NOTE: Clean up output string if UTF-16 iterator is still less than output string size. */
+	while (utf16_cursor < utf16_size)
+	{
+		*utf16_code_unit = '\0';
+		utf16_code_unit++;
+		utf16_cursor++;
+	}
 }
 
 static S32
