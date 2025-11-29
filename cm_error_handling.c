@@ -18,7 +18,7 @@
 #define EXIT_STR "Program will exit."
 #define CFLR_LEN 5024
 global  char  g_file_line_msg[CFLR_LEN];
-global  S8    g_debug_info = {.str = g_file_line_msg, .len = CFLR_LEN};
+global  S8    g_debug_info = {.str = (u8*)g_file_line_msg, .len = CFLR_LEN};
 
 typedef enum CM_CODE {
   CM_OK                 = 0,
@@ -141,7 +141,7 @@ debug_info_gather(S8 buffer, char* file, int line, char* fn_call, char* fn_ctx)
   ZeroMemory(buffer.str, buffer.len);
   int   len = (int)buffer.len - 1;
   char* fmt = "%s:%d: in function `%s` - Thread %d\n\t From `%s`";
-  wnsprintf(buffer.str, len, fmt, file, line, fn_call, GetCurrentThreadId(), fn_ctx);
+  wnsprintf((PSTR)buffer.str, len, fmt, file, line, fn_call, GetCurrentThreadId(), fn_ctx);
 }
 
 static char*

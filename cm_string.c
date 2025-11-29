@@ -275,8 +275,8 @@ utf8_to_utf16(u8* utf8_str, i32 utf8_size, i16* utf16_str, i32 utf16_size)
 
 			i32 unicode        = (sixth << 4) | (fifth_high << 2) | fifth_low | (fourth << 12) | (third << 8)
                            | (second_high << 6) | (second_low << 4) | first;
-			i16 high_surrogate = (unicode - 0x10000) / 0x400 + 0xD800;
-			i16 low_surrogate  = (unicode - 0x10000) % 0x400 + 0xDC00;
+			i16 high_surrogate = (i16) (unicode - 0x10000) / 0x400 + 0xD800;
+			i16 low_surrogate  = (i16) (unicode - 0x10000) % 0x400 + 0xDC00;
 
 			*utf16_code_unit = low_surrogate;
 			utf16_code_unit++;
@@ -408,7 +408,7 @@ string_len(S8 str)
 force_inline S8
 make_string(char* str)
 {
-  return (S8){.str = str, .len = c_strlen(str)};
+  return (S8){.str = (u8*)str, .len = c_strlen(str)};
 }
 /* 
  * WARN: 
