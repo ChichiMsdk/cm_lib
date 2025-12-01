@@ -6,7 +6,11 @@ struct UnicodeDecode { u32 inc; u32 codepoint; };
 
 // 8 bits unsigned string //////////////////////////////////////////////////////
 typedef struct S8 S8;
-struct S8 { char  *str; u64 len; };
+struct S8 { u8 *str; u64 len; };
+
+// 16 bits unsigned string //////////////////////////////////////////////////////
+typedef struct S16 S16;
+struct S16 { u16  *str; u64 len; };
 
 // 32 bits unsigned string /////////////////////////////////////////////////////
 typedef struct S32 S32;

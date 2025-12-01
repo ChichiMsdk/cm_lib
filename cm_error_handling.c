@@ -18,7 +18,7 @@
 #define EXIT_STR "Program will exit."
 #define CFLR_LEN 5024
 global  char  g_file_line_msg[CFLR_LEN];
-global  S8    g_debug_info = {.str = g_file_line_msg, .len = CFLR_LEN};
+global  S8    g_debug_info = {.str = (u8*)g_file_line_msg, .len = CFLR_LEN};
 
 typedef enum CM_CODE {
   CM_OK                 = 0,
@@ -29,6 +29,8 @@ typedef enum CM_CODE {
 
   CM_INVALID_DATA       = 10,
 
+  CM_SHARE_VIOLATION    = 17,
+  CM_FILE_READ_FAIL     = 18,
   CM_FILE_WRITE_FAIL    = 19,
   CM_FILE_OPEN_FAIL     = 20,
   CM_DIR_OPEN_FAIL      = 21,
@@ -116,6 +118,8 @@ cm_code_get_string(CM_CODE code)
     case CM_SIZE_TOO_BIG       : str = "CM_SIZE_TOO_BIG"; break;
     case CM_INVALID_SIZE       : str = "CM_INVALID_SIZE"; break;
     case CM_INVALID_DATA       : str = "CM_INVALID_DATA"; break;
+    case CM_SHARE_VIOLATION    : str = "CM_SHARE_VIOLATION"; break;
+    case CM_FILE_READ_FAIL     : str = "CM_FILE_READ_FAIL"; break;
     case CM_FILE_WRITE_FAIL    : str = "CM_FILE_WRITE_FAIL"; break;
     case CM_FILE_OPEN_FAIL     : str = "CM_FILE_OPEN_FAIL"; break;
     case CM_DIR_OPEN_FAIL      : str = "CM_DIR_OPEN_FAIL"; break;
@@ -137,7 +141,7 @@ debug_info_gather(S8 buffer, char* file, int line, char* fn_call, char* fn_ctx)
   ZeroMemory(buffer.str, buffer.len);
   int   len = (int)buffer.len - 1;
   char* fmt = "%s:%d: in function `%s` - Thread %d\n\t From `%s`";
-  wnsprintf(buffer.str, len, fmt, file, line, fn_call, GetCurrentThreadId(), fn_ctx);
+  wnsprintf((PSTR)buffer.str, len, fmt, file, line, fn_call, GetCurrentThreadId(), fn_ctx);
 }
 
 static char*
@@ -336,7 +340,7 @@ show_error_msg_box(char* str, DWORD err)
   DO\
     debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_console_v(GetLastError(), ## __VA_ARGS__, NULL);\
-    goto (label);\
+    goto label;\
   WHILE
 
 #define report_error(fn_call, ...) \
@@ -356,6 +360,12 @@ show_error_msg_box(char* str, DWORD err)
     debug_info_gather(g_debug_info,  __FILE__, __LINE__, (fn_call), __FUNCTION__);\
     show_error_msg_box((x), GetLastError());\
   WHILE
+
+#define report(fn_call, ...)\
+	DO\
+	report_error((fn_call), ## __VA_ARGS__);\
+	report_error_box((fn_call), ## __VA_ARGS__);\
+	WHILE
 
 #ifndef report_all
 #define report_all(x, fn)\
