@@ -10,8 +10,6 @@ typedef struct Slice
   u64   size;
 }Slice;
 
-#define cmFile File
-
 #if (CM_WINDOWS)
 #include <windows.h>
 
@@ -23,7 +21,7 @@ typedef struct File
   HANDLE    h_map;
   Slice     buffer;
   u64       file_size;
-} File;
+} File, cmFile;
 
 #elif (OS_LINUX) || (OS_MAC)
 #include <unistd.h>
@@ -35,7 +33,7 @@ typedef struct File
   void  *map;
   Slice buffer;
   u64   file_size;
-} File;
+} File, cmFile;
 
 #endif
 
@@ -53,7 +51,7 @@ unmap_view_of_file(void *base)
 }
 
 force_inline CM_CODE
-file_mapping_create(cmFile* file, u32 fl_protect, u32 mapping_max_size)
+file_mapping_create(File* file, u32 fl_protect, u32 mapping_max_size)
 {
   u32     low, high, file_size;
   CM_CODE error_value;
@@ -72,7 +70,7 @@ file_mapping_create(cmFile* file, u32 fl_protect, u32 mapping_max_size)
 }
 
 force_inline CM_CODE
-file_openW(wchar_t* path, u32 access, u32 share, cmFile* file)
+file_openW(wchar_t* path, u32 access, u32 share, File* file)
 {
   u32     c           = OPEN_EXISTING;
   u32     attr        = FILE_ATTRIBUTE_NORMAL;
@@ -101,7 +99,7 @@ file_openW(wchar_t* path, u32 access, u32 share, cmFile* file)
 }
 
 force_inline CM_CODE
-file_open(char* path, u32 access, u32 share, cmFile* file)
+file_open(char* path, u32 access, u32 share, File* file)
 {
   u32     creation, attr;
   CM_CODE error_value;
@@ -109,7 +107,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
   attr        = FILE_ATTRIBUTE_NORMAL;
   creation    = OPEN_EXISTING;
   error_value = CM_OK;
-  memset(file, 0, sizeof(cmFile));
+  memset(file, 0, sizeof(File));
   file->h_file = CreateFile(path, access, share, NULL, creation, attr, NULL);
   if (file->h_file == INVALID_HANDLE_VALUE)
   {
@@ -133,7 +131,7 @@ file_open(char* path, u32 access, u32 share, cmFile* file)
 }
 
 force_inline CM_CODE
-file_create(char* path, u32 access, u32 share, u32 c, cmFile* f)
+file_create(char* path, u32 access, u32 share, u32 c, File* f)
 {
   u32     attr;
   CM_CODE error_value;
@@ -159,7 +157,7 @@ file_create(char* path, u32 access, u32 share, u32 c, cmFile* f)
 }
 
 static inline CM_CODE
-file_write(char* buffer, u32 size, cmFile* f)
+file_write(char* buffer, u32 size, File* f)
 {
   i64     written;
   CM_CODE error_value; 
@@ -182,7 +180,7 @@ handle_close(HANDLE h)
 }
 
 static CM_CODE
-file_close(cmFile* file)
+file_close(File* file)
 {
   CM_CODE error_value;
 
@@ -205,7 +203,7 @@ static CM_CODE
 file_dump(char* path, char* buffer, u32 size)
 {
   u32     generic, share, attr;
-	cmFile	file_struct;
+	File	file_struct;
   CM_CODE error_value;
 
 	attr				= FILE_ATTRIBUTE_NORMAL;
@@ -218,7 +216,7 @@ file_dump(char* path, char* buffer, u32 size)
 }
 
 static CM_CODE
-file_exist_open_map_sized(char* path, cmFile *file, u32 max_size, u32 access, u32 fl_protec, u32 desired)
+file_exist_open_map_sized(char* path, File *file, u32 max_size, u32 access, u32 fl_protec, u32 desired)
 {
   DWORD       gran;
   CM_CODE     error_value;
@@ -240,13 +238,7 @@ file_exist_open_map_sized(char* path, cmFile *file, u32 max_size, u32 access, u3
 }
 
 force_inline CM_CODE
-file_exist_open_map_sized_rw(
-    char*                 path,
-    cmFile*               file,
-    u32                   max_size,
-    u32                   access,
-    u32                   fl_protec,
-    u32                   desired)
+file_exist_open_map_sized_rw(char* path, File* file, u32 max_size, u32 access, u32 fl_protec, u32 desired)
 {
   CM_CODE     error_value = CM_OK;
   SYSTEM_INFO sys         = {0};
@@ -272,7 +264,7 @@ file_exist_open_map_sized_rw(
 }
 
 force_inline CM_CODE
-file_exist_open_map_rw(char* path, cmFile* file)
+file_exist_open_map_rw(char* path, File* file)
 {
   u32 max_size, generic, map;
 
@@ -283,7 +275,7 @@ file_exist_open_map_rw(char* path, cmFile* file)
 }
 
 force_inline CM_CODE
-file_exist_open_map_ro(char* path, cmFile* file)
+file_exist_open_map_ro(char* path, File* file)
 {
   u32 max_size;
 

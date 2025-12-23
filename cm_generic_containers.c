@@ -6,9 +6,9 @@
 
 #define _VRELEASE\
   if (_a->arr){\
-  _a->capacity = 0;\
-  _a->size     = 0;\
   _a->arr      = NULL;\
+  _a->size     = 0;\
+  _a->capacity = 0;\
   heap_free_dz(_a->arr);\
   }\
   return true;
@@ -40,13 +40,13 @@
 #define V_FULL(T) V_STRUCT(T); V_ADD_FN(T); V_INIT_FN(T); V_RELEASE_FN(T);
 
 V_FULL(i8);
-V_FULL(i16)
-V_FULL(i32)
-V_FULL(i64)
+V_FULL(i16);
+V_FULL(i32);
+V_FULL(i64);
 V_FULL(u8);
-V_FULL(u16)
-V_FULL(u32)
-V_FULL(u64)
+V_FULL(u16);
+V_FULL(u32);
+V_FULL(u64);
 V_FULL(S8);
 
 [[deprecated]] bool

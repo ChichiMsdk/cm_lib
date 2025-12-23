@@ -9,15 +9,15 @@
 #include <stdbool.h>
 #include <processenv.h>
 
-/* WARN: Not thread safe ! */
-uint32_t
+/* @Warn: Not thread safe ! */
+static uint32_t
 cwd_get(char* buffer, uint32_t size)
 {
   return GetCurrentDirectory(size, buffer);
 }
 
-/* WARN: Not thread safe ! */
-bool
+/* @Warn: Not thread safe ! */
+static bool
 cwd_set(char* path)
 {
   BOOL value = SetCurrentDirectory(path);
@@ -28,14 +28,14 @@ cwd_set(char* path)
   return true;
 }
 
-char*
+static char*
 environment_get(void)
 {
   return GetEnvironmentStrings();
 }
 
 /* 
- * INFO:  `DWORD cmd_line_get_ansi(int, char***)`
+ * @Note: `DWORD cmd_line_get_ansi(int, char***)`
  *        Calls CommandLineToArgvW and WideCharToMultiByte
  *        If function fails, the return value is a DWORD from GetLastError().
  */
@@ -73,21 +73,25 @@ typedef struct _Command_Line
 static bool
 command_line_args_ansi(_Command_Line* command_line)
 {
-  wchar_t** wargv = CommandLineToArgvW(GetCommandLineW(), &command_line->argc);
+  i32       wargvi_size, i;
+  char      *arg;
+  wchar_t   **wargv;
+
+  wargv = CommandLineToArgvW(GetCommandLineW(), &command_line->argc);
   OR_RETURN(wargv, "CommandLineToArgvW", false);
 
-  int wargvi_size = 0;
-  for (int i = 0; i < command_line->argc;  i++)
+  wargvi_size = 0;
+  for (i = 0; i < command_line->argc;  i++)
   {
     wargvi_size += WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL, NULL) + 1;
   }
 
   heap_alloc_dz((sizeof(char *) * (command_line->argc + 1)) + sizeof(char) * wargvi_size, command_line->argv);
 
-  /* NOTE: Converting wargv -> argv */
-  char* arg = (char *)&(command_line->argv[command_line->argc + 1]);
+  /* @Note: Converting wargv -> argv */
+  arg = (char *)&(command_line->argv[command_line->argc + 1]);
 
-  for (int i = 0; i < command_line->argc; i++)
+  for (i = 0; i < command_line->argc; i++)
   {
     command_line->argv[i] = arg;
     arg += WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, arg, wargvi_size, NULL, NULL) + 1;
@@ -107,42 +111,41 @@ directory_exist(char* path)
   return (dw != INVALID_FILE_ATTRIBUTES) && (dw & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-/* WARNING: This function must be called with an ALLOCATED entire_path !
- *          It will not crash with MSVC but WILL on any other platform !!!
+/* 
+ * @Warning: This function must be called with an ALLOCATED entire_path !
+ *           It will not crash with MSVC but WILL on any other platform !!!
  */
 static bool
-directory_create_rf(char* entire_path)
+directory_create_rf(char *entire_path)
 {
+  i32   len, curr_len;
+  char  *end_part;
+
   if (directory_exist(entire_path))
-  {
     return true;
-  }
-  /* NOTE: Remove trailing slashes */
-  int len = (int) strlen(entire_path);
+
+  /* @Note: Remove trailing slashes */
+  len = (i32) strlen(entire_path);
   if (len - 1 >= 0 && entire_path[len - 1] == '\\')
     len--;
 
-  /* NOTE: Skip drive specifier */
-  int curr_len = 0;
+  /* @Note: Skip drive specifier */
+  curr_len = 0;
   if (len >= 3 && entire_path[1] == ':' && entire_path[2] == '\\')
     curr_len = 2;
 
-  /* NOTE: We can't create root so skip past any root specifier */
+  /* @Note: We can't create root so skip past any root specifier */
   while (entire_path[curr_len] == '\\')
     curr_len++;
 
   while (curr_len < len && entire_path[curr_len])
   {
-    /* NOTE: Get the end of next part to check */
-    char* end_part = cstrchr(entire_path + curr_len, '\\');
-    if (end_part != NULL)
-      curr_len = (int)(end_part - entire_path);
-    else
-      curr_len = len;
-
-    /* FIXME: 
-     *        We change '\\' to 0 and revert it back later to avoid allocating memory
-     *        But if 'entire_path' is in read_only memory this WILL crash..
+    /* @Note: Get the end of next part to check */
+    end_part = cstrchr(entire_path + curr_len, '\\');
+    curr_len = (end_part != NULL) ? (i32) (end_part - entire_path) : len;
+    /* 
+     * @FixMe: We change '\\' to 0 and revert it back later to avoid allocating memory
+     *         But if 'entire_path' is in read_only memory this WILL crash..
      */
     entire_path[curr_len] = 0;
     if (!directory_exist(entire_path))
