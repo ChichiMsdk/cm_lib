@@ -13,7 +13,7 @@
 static uint32_t
 cwd_get(char* buffer, uint32_t size)
 {
-  return GetCurrentDirectory(size, buffer);
+  return GetCurrentDirectoryA(size, buffer);
 }
 
 /* @Warn: Not thread safe ! */
