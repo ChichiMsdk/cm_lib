@@ -19,14 +19,9 @@ cwd_get(char* buffer, uint32_t size)
 
 /* @Warn: Not thread safe ! */
 static bool
-cwd_set(char* path)
+cwd_set(char *path)
 {
-  BOOL value = SetCurrentDirectoryA(path);
-  if (value == FALSE)
-  {
-    return false;
-  }
-  return true;
+  return SetCurrentDirectoryA(path);
 }
 
 static char*
