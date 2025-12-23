@@ -97,19 +97,14 @@ command_line_args_ansi(_Command_Line* command_line)
   return true;
 }
 
-/* NOTE: Returns true if path exists AND is a directory */
+/* @Note: Returns true if path exists AND is a directory */
 static bool
 directory_exist(char* path)
 {
-  DWORD dw = GetFileAttributes(path);
-  if (dw != INVALID_FILE_ATTRIBUTES)
-  { 
-    if (dw & FILE_ATTRIBUTE_DIRECTORY)
-    {
-      return true;
-    }
-  }
-  return false;
+  u32 dw;
+
+  dw = GetFileAttributesA(path);
+  return (dw != INVALID_FILE_ATTRIBUTES) && (dw & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 /* WARNING: This function must be called with an ALLOCATED entire_path !
