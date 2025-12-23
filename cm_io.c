@@ -8,7 +8,7 @@ typedef struct Slice
 {
   void  *view;
   u64   size;
-}Slice;
+} Slice;
 
 #if (CM_WINDOWS)
 #include <windows.h>
@@ -22,6 +22,9 @@ typedef struct File
   Slice     buffer;
   u64       file_size;
 } File, cmFile;
+
+#define GENERIC_READ_WRITE					 (GENERIC_READ | GENERIC_WRITE)
+#define FILE_SHARE_READ_WRITE_DELETE (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
 
 #elif (OS_LINUX) || (OS_MAC)
 #include <unistd.h>

@@ -6,3 +6,6 @@ chichi_timer.c
 *.raddbg_project
 *tags
 test.c
+*.ps1
+src/*
+*.ahk

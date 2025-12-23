@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <cm_allocator.c>
 
 #define PRINT_BUFFER_SIZE 10 * 1024
 
@@ -96,7 +97,7 @@ str_ncmp_impl(char* src, ...)
   return false;
 }
 
-#define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL) 
+#define str_ncmp(str, ...) str_ncmp_impl(str, __VA_ARGS__, NULL)
 
 global u8 utf8_class[32] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,2,2,3,3,4,5, };
 
@@ -433,6 +434,31 @@ fast_atoi(char* str)
 }
 
 static void
+itos(i64 nb, char* buffer, u32 buf_size)
+{
+  u32 i       = 0;
+  u64 size    = 0;
+  char nums[] = "0123456789";
+  if (nb < 0) { buffer[i] = '-'; nb *= -1; }
+
+  u64 tmp    = nb;
+  while (tmp > 0) { tmp/= 10; size++;}
+  if (size >= buf_size) return;
+  size--;
+  if (nb == 0)
+  {
+    buffer[size - i] = '0';
+    return ;
+  }
+  while (nb > 0)
+  {
+    buffer[size - i] = nums[(nb % 10)];
+    nb /= 10;
+    i++;
+  }
+}
+
+static void
 cm_itoa(i64 nb, char* buffer, u32 buf_size)
 {
   memset(buffer, 0, buf_size);
@@ -567,6 +593,109 @@ static i64
 print_string(S8 string)
 {
   return write_file(STDOUT(), string.str, (DWORD)string.len);
+}
+
+typedef struct Print_Buffer
+{
+	u64		cursor;
+	u64		total_size;
+	char  *buffer;
+} Print_Buffer;
+
+#define TLS_PRINT_BUFFER_INIT_SIZE 1024 * 10
+#define TLS_PRINT_BUFFER_ITOS  20
+#define TLS_PRINT_BUFFER_FTOA  40
+
+_Thread_local bool				 tls_print_is_initialized = false;
+_Thread_local char*				 tls_print_buffer_ftoa;
+_Thread_local char*				 tls_print_buffer_itos;
+_Thread_local Print_Buffer tls_print_buffer;
+
+static inline void
+tls_print_buffer_initialize(void)
+{
+	if (tls_print_is_initialized) return ;
+	tls_print_buffer_ftoa =   halloc(TLS_PRINT_BUFFER_FTOA);
+	tls_print_buffer_itos =   halloc(TLS_PRINT_BUFFER_ITOS);
+	tls_print_buffer.buffer = halloc(TLS_PRINT_BUFFER_INIT_SIZE);
+	tls_print_buffer.cursor = 0;
+	tls_print_buffer.total_size = TLS_PRINT_BUFFER_INIT_SIZE;
+	tls_print_is_initialized = true;
+}
+
+static inline void
+print_buffer_realloc(u64 new_size)
+{
+	tls_print_buffer.buffer = hrealloc(tls_print_buffer.buffer, new_size);
+	tls_print_buffer.total_size = new_size;
+}
+
+static void
+print_handle_string(char* str)
+{
+	u64 len  = strlen(str);
+	u64 left = tls_print_buffer.total_size - tls_print_buffer.cursor;
+	/* NOTE: Shall we trim it instead ? */
+	if (len > left) { print_buffer_realloc(len * 2); }
+
+	memcpy(&tls_print_buffer.buffer[tls_print_buffer.cursor], str, len);
+	tls_print_buffer.cursor += len;
+}
+
+static void
+print_handle_integer(i32 integer)
+{
+#define ITOA 20
+	itos(integer, tls_print_buffer_itos , ITOA);
+#undef ITOA
+	print_handle_string(tls_print_buffer_itos);
+}
+
+static void
+print_handle_float(f32 float_nb)
+{
+	i32 precision = 3;
+	tls_print_buffer_ftoa = ftoa(float_nb, tls_print_buffer_ftoa, precision);
+	print_handle_string(tls_print_buffer_ftoa);
+}
+
+static void
+print_handle_other(char c)
+{
+	char buffer[2];
+	buffer[0] = c; buffer[1] = 0;
+	print_handle_string(buffer);
+}
+
+static i64
+print(char* fmt, ...)
+{
+	cm_assert(tls_print_is_initialized);
+	va_list args;
+	va_start(args, fmt);
+
+	u64 i = 0;
+	while(fmt[i])
+	{
+		if (fmt[i] == '%')
+		{
+			i++;
+			switch(fmt[i])
+			{
+				default: i--; goto add_buffer_;
+				case 's': print_handle_string(va_arg(args, char*)); break;
+				case 'd': print_handle_integer(va_arg(args, int)); break;
+				case 'f': print_handle_float(va_arg(args, float)); break;
+			}
+		}
+		else
+		{
+add_buffer_:;
+			print_handle_other(fmt[i]);
+		}
+		i++;
+	}
+  return write_file(STDOUT(), tls_print_buffer.buffer, tls_print_buffer.cursor);
 }
 
 #ifdef NO_CRT_LINKED
