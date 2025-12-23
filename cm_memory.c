@@ -16,8 +16,7 @@
 static bool
 page_commit(void* base, uint64_t size)
 {
-  bool result = VirtualAlloc(base, size, MEM_COMMIT, PAGE_READWRITE);
-  return result;
+  return VirtualAlloc(base, size, MEM_COMMIT, PAGE_READWRITE);
 }
 
 static void*
@@ -48,19 +47,19 @@ page_large_reserve(uint64_t size)
 static char*
 heap_error_str(i64 code)
 {
-  char *msg = "Unknown";
+  char *msg;
+
+  msg = "Unknown";
   switch (code)
   {
     case STATUS_NO_MEMORY: 
       {
-        msg = "The allocation attempt failed because of a lack of" 
-              " available memory or heap corruption.";
+        msg = "The allocation attempt failed because of a lack of available memory or heap corruption.";
         break;
       }
     case STATUS_ACCESS_VIOLATION:
       {
-        msg = "The allocation attempt failed because of heap"
-              " corruption or improper function parameters.";
+        msg = "The allocation attempt failed because of heap corruption or improper function parameters.";
         break;
       }
     default: break;
@@ -118,14 +117,13 @@ static wchar_t*
 chars_to_wchars(char* input)
 {
   /* NOTE: This makes me wanna vomit */
-  u64     len     = strlen(input);
-  wchar_t *output = NULL;
-  /* FIXME: */
+  u64     len;
+  wchar_t *output;
+
+  len = strlen(input);
   heap_alloc_dz((len + 1) * sizeof(wchar_t), output);
   for (size_t i = 0; i < len; i++)
-  {
     output[i] = (wchar_t)input[i];
-  }
   output[len] = L'\0';
   return output;
 }
