@@ -147,7 +147,7 @@ directory_create_rf(char* entire_path)
     entire_path[curr_len] = 0;
     if (!directory_exist(entire_path))
     {
-      if (!CreateDirectory(entire_path, NULL))
+      if (!CreateDirectoryA(entire_path, NULL))
       {
         report_error("CreateDirectory", entire_path);
         return false;
