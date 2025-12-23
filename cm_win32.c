@@ -6,6 +6,7 @@
 #endif
 
 #include <cm_allocator.c>
+#include <cm_memory.c>
 #include <stdbool.h>
 #include <processenv.h>
 
