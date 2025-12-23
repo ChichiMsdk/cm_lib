@@ -21,7 +21,7 @@ cwd_get(char* buffer, uint32_t size)
 static bool
 cwd_set(char* path)
 {
-  BOOL value = SetCurrentDirectory(path);
+  BOOL value = SetCurrentDirectoryA(path);
   if (value == FALSE)
   {
     return false;
@@ -32,7 +32,7 @@ cwd_set(char* path)
 static char*
 environment_get(void)
 {
-  return GetEnvironmentStrings();
+  return GetEnvironmentStringsA();
 }
 
 /* 
