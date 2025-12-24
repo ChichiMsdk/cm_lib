@@ -139,22 +139,16 @@ file_create(char* path, u32 access, u32 share, u32 c, File* f)
   u32     attr;
   CM_CODE error_value;
 
+  memset(f, 0, sizeof(File));
   attr        = FILE_ATTRIBUTE_NORMAL;
-  error_value = CM_OK;
-  f->h_file = CreateFile(path, access, share, NULL, c, attr, NULL);
-  if (f->h_file == INVALID_HANDLE_VALUE)
-  {
-    error_value = CM_FILE_OPEN_FAIL;
-  }
+  f->h_file   = CreateFile(path, access, share, NULL, c, attr, NULL);
+  error_value = (f->h_file == INVALID_HANDLE_VALUE) ? CM_FILE_OPEN_FAIL : CM_OK;
   if (error_value == CM_OK)
   {
-    /* FIXME: Use GetFileSizeEx instead */
+    /* @FixMe: Use GetFileSizeEx instead */
     f->path      = path;
     f->file_size = GetFileSize(f->h_file, NULL);
-    if (f->file_size == INVALID_FILE_SIZE)
-    {
-      error_value = CM_INVALID_SIZE;
-    }
+    error_value = (f->file_size == INVALID_FILE_SIZE) ? CM_INVALID_SIZE : CM_OK;
   }
   return error_value;
 }
@@ -206,7 +200,7 @@ static CM_CODE
 file_dump(char* path, char* buffer, u32 size)
 {
   u32     generic, share, attr;
-	File	file_struct;
+	File    file_struct;
   CM_CODE error_value;
 
 	attr				= FILE_ATTRIBUTE_NORMAL;
