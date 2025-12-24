@@ -16,7 +16,7 @@
 #include <shlwapi.h>
 #pragma warning(pop)
 
-i64
+static i64
 write_file(HANDLE h, void* buffer, u32 length)
 {
   DWORD written = 0;
@@ -25,7 +25,7 @@ write_file(HANDLE h, void* buffer, u32 length)
   return written;
 }
 
-i32
+static i32
 message_box(char* msg)
 {
 	DWORD written = 0;
@@ -36,7 +36,7 @@ message_box(char* msg)
 	return value;
 }
 
-i32
+static i32
 printb(char* fmt, ...)
 {
   char buffer[PRINT_BUFFER_SIZE];
@@ -66,7 +66,7 @@ message_box(MU char* msg)
 
 #endif // CM_WINDOWS
 
-char*
+static char*
 cstrchr(char* str, char c)
 {
   i32 i = 0;
@@ -80,7 +80,7 @@ cstrchr(char* str, char c)
   return NULL;
 }
 
-bool
+static bool
 str_ncmp_impl(char* src, ...)
 {
   va_list args;
@@ -162,8 +162,8 @@ utf8_decode(u8 *str, u64 max)
   return(result);
 }
 
-/* NOTE: https://gist.github.com/tommai78101/3631ed1f136b78238e85582f08bdc618 */
-void
+/* @Note: https://gist.github.com/tommai78101/3631ed1f136b78238e85582f08bdc618 */
+static void
 utf8_to_utf16(u8* utf8_str, i32 utf8_size, i16* utf16_str, i32 utf16_size)
 {
 	i32  utf8_cursor     = 0;
