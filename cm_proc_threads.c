@@ -35,7 +35,8 @@ process_create(char *path, char *args, bool wait, u32 *process_code)
   BOOL                inherit   = FALSE;
   void*               env       = NULL;
   char*               cwd       = NULL;
-  DWORD               flags, dw = 0;
+  DWORD               flags     = 0;
+  DWORD               dw        = 0;
   STARTUPINFO         si        = {.cb = sizeof(si)};
   PROCESS_INFORMATION pi        = {0};
   SECURITY_ATTRIBUTES pa        = {0};
