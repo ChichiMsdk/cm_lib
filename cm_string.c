@@ -16,6 +16,32 @@
 #include <shlwapi.h>
 #pragma warning(pop)
 
+static bool
+search_string_with_sentinel(char* str, u32 l1, char sentinel, char *find, u32 l2)
+{
+  u32 i, j;
+
+  i = 0;
+  while (i < l1 && str[i] != sentinel)
+  {
+    j = 0;
+    if (str[i] == find[0])
+    {
+      while (i < l1 && j < l2 && str[i] != sentinel && str[i] == find[j])
+      { j++; i++; }
+      if (j == l2) return true;
+    }
+    i++;
+  }
+  return false;
+}
+
+static inline bool
+is_white_space(char c)
+{
+  return (c == '\t' || c == ' ' || c == '\v' || c == '\n' || c == '\r');
+}
+
 static i64
 write_file(HANDLE h, void* buffer, u32 length)
 {
