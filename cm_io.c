@@ -60,8 +60,8 @@ file_mapping_create(File* file, u32 fl_protect, u32 mapping_max_size)
   CM_CODE error_value;
 
   file_size   = (u32) file->file_size;
-  high        = 0;
   low         = (file_size > mapping_max_size) ? mapping_max_size : file_size;
+  high        = 0;
   error_value = CM_OK;
   file->h_map = CreateFileMapping(file->h_file, NULL, fl_protect, high, low, NULL);
   if (!file->h_map)
@@ -148,7 +148,7 @@ file_create(char* path, u32 access, u32 share, u32 c, File* f)
     /* @FixMe: Use GetFileSizeEx instead */
     f->path      = path;
     f->file_size = GetFileSize(f->h_file, NULL);
-    error_value = (f->file_size == INVALID_FILE_SIZE) ? CM_INVALID_SIZE : CM_OK;
+    error_value  = (f->file_size == INVALID_FILE_SIZE) ? CM_INVALID_SIZE : CM_OK;
   }
   return error_value;
 }
@@ -160,8 +160,7 @@ file_write(char* buffer, u32 size, File* f)
   CM_CODE error_value; 
 
   written     = write_file(f->h_file, buffer, size);
-  error_value = CM_OK;
-  if (written == -1) error_value = CM_FILE_WRITE_FAIL;
+  error_value = (written == -1) ? CM_FILE_WRITE_FAIL : CM_OK;
   return error_value;
 }
 

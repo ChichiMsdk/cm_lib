@@ -29,13 +29,13 @@ log_thread(DWORD dw)
 }
 
 bool
-process_create(char* path, char* args, bool wait, u32 *process_code)
+process_create(char *path, char *args, bool wait, u32 *process_code)
 {
   BOOL                value     = FALSE;
   BOOL                inherit   = FALSE;
   void*               env       = NULL;
   char*               cwd       = NULL;
-  DWORD               flags     = 0;
+  DWORD               flags, dw = 0;
   STARTUPINFO         si        = {.cb = sizeof(si)};
   PROCESS_INFORMATION pi        = {0};
   SECURITY_ATTRIBUTES pa        = {0};
@@ -44,7 +44,8 @@ process_create(char* path, char* args, bool wait, u32 *process_code)
   value = CreateProcess(path, args, &pa, &ta, inherit, flags, env, cwd, &si, &pi);
   if (value == FALSE)
   {
-    /* NOTE: why would you close anything if it failed ?
+    /* @Note: why would you close anything if it failed ? */
+    /*
      * CloseHandle(pi.hProcess);
      * CloseHandle(pi.hThread);
      */
@@ -53,8 +54,7 @@ process_create(char* path, char* args, bool wait, u32 *process_code)
   }
   if (wait)
   {
-    /* printf("Waiting thread: %ld and process:%ld\n", pi.dwThreadId, pi.dwProcessId); */
-    DWORD dw = WaitForSingleObject(pi.hProcess, 10000); // 10 sec
+    dw = WaitForSingleObject(pi.hProcess, 10000); // 10 sec
     log_thread(dw);
     dw = WaitForSingleObject(pi.hThread, 10000); // 10 sec
     log_thread(dw);
@@ -79,42 +79,53 @@ shell_execute(char* path, char* args)
 }
 #endif
 
-bool
-process_list_all(void)
-{
-  HANDLE          snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  PROCESSENTRY32  entry = { .dwSize = sizeof(PROCESSENTRY32), };
+typedef bool (*Function_Process_Do)(PROCESSENTRY32, void*);
 
+static bool
+process_list_do(Function_Process_Do fn_user, void *data)
+{
+  HANDLE          snapshot;
+  PROCESSENTRY32  entry;
+
+  entry    = (PROCESSENTRY32) { .dwSize = sizeof(PROCESSENTRY32), };
+  snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   if (snapshot == INVALID_HANDLE_VALUE)
     return false;
 
-  /* FIXME: Should failure be handled this way ? */
+  /* @FixMe: Should failure be handled this way ? */
   if (!Process32First(snapshot, &entry)) 
   {
     CloseHandle(snapshot);
     return false;
   }
   do {
-    printf("%s\n", entry.szExeFile);
+    if ( !fn_user(entry, data) ) return false;
   } while (Process32Next(snapshot, &entry));
-  /* NOTE:
-   *       Can we not keep the snapshot longer ?
+  /* 
+   * @Note: Can we not keep the snapshot longer ?
    *       How much memory / what are the implications ?
    */
   CloseHandle(snapshot);
   return true;
 }
 
-bool
+inline static bool
+_print_all_process_names(PROCESSENTRY32 entry, void *data)
+{ return printf("%s\n", entry.szExeFile); }
+
+inline static bool process_list_all(void) { return process_list_do(_print_all_process_names, NULL); }
+
+static bool
 process_is_running(char* process_name) 
 {
-  HANDLE          snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  PROCESSENTRY32  entry = { .dwSize = sizeof(PROCESSENTRY32), };
+  HANDLE          snapshot;
+  PROCESSENTRY32  entry;
 
+  entry    = (PROCESSENTRY32) { .dwSize = sizeof(PROCESSENTRY32), };
+  snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   if (snapshot == INVALID_HANDLE_VALUE)
     return false;
 
-  /* FIXME: Should failure be handled this way ? */
   if (!Process32First(snapshot, &entry)) 
   {
     CloseHandle(snapshot);
@@ -128,11 +139,6 @@ process_is_running(char* process_name)
       return true;
     }
   } while (Process32Next(snapshot, &entry));
-
-  /* NOTE:
-   *       Can we not keep the snapshot longer ?
-   *       How much memory / what are the implications ?
-   */
   CloseHandle(snapshot);
   return false;
 }
